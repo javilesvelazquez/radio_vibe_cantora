@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "Artist": {
+      "title": "Artist",
+      "description": "A musical artist or band",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "genre": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "headerUrl": { "type": "string" },
+        "bio": { "type": "string" },
+        "longBio": { "type": "string" },
+        "country": { "type": "string" },
+        "stripeLink": { "type": "string" },
+        "socialLinks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "platform": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        },
+        "discography": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "year": { "type": "string" },
+              "coverUrl": { "type": "string" },
+              "listenUrl": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["name", "imageUrl"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "A radio event or show",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["live", "special", "interview"] }
+      },
+      "required": ["title", "date", "time", "type"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "App configuration settings",
+      "type": "object",
+      "properties": {
+        "key": { "type": "string" },
+        "value": { "type": "string" }
+      },
+      "required": ["key", "value"]
+    },
+    "NowPlaying": {
+      "title": "NowPlaying",
+      "description": "Information about the currently playing track",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "artist": { "type": "string" },
+        "album": { "type": "string" },
+        "coverUrl": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/artists/{artistId}": {
+      "schema": "Artist",
+      "description": "Collection of artists"
+    },
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "Collection of radio events"
+    },
+    "/settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Global app settings"
+    }
+  }
+}

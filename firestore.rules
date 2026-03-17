@@ -1,0 +1,120 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: artists
+    // Fields:
+    //   - name: string (required)
+    //   - bio: string (optional)
+    //   - longBio: string (optional)
+    //   - country: string (optional)
+    //   - imageUrl: string (optional, base64)
+    //   - headerUrl: string (optional, base64)
+    //   - stripeLink: string (optional, URL)
+    //   - socialLinks: list (optional, objects with platform and url)
+    //   - discography: list (optional, objects with title, year, coverUrl, listenUrl)
+    //
+    // Collection: events
+    // Fields:
+    //   - title: string (required)
+    //   - artistId: string (required)
+    //   - artistName: string (required)
+    //   - date: string (required, ISO 8601)
+    //   - location: string (optional)
+    //   - description: string (optional)
+    //
+    // Collection: settings
+    // Fields:
+    //   - key: string (required)
+    //   - value: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "jesusavilesvelazquez@gmail.com" && 
+         request.auth.token.email_verified == true);
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function isValidArtist(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() < 500)) &&
+             (!('longBio' in data) || (data.longBio is string && data.longBio.size() < 5000)) &&
+             (!('country' in data) || (data.country is string && data.country.size() < 50)) &&
+             (!('imageUrl' in data) || (isValidUrl(data.imageUrl) && data.imageUrl.size() < 1000)) &&
+             (!('headerUrl' in data) || (isValidUrl(data.headerUrl) && data.headerUrl.size() < 1000)) &&
+             (!('stripeLink' in data) || (isValidUrl(data.stripeLink) && data.stripeLink.size() < 1000)) &&
+             (!('socialLinks' in data) || (data.socialLinks is list && data.socialLinks.size() < 10)) &&
+             (!('discography' in data) || (data.discography is list && data.discography.size() < 50));
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['title', 'artistId', 'artistName', 'date']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.artistId is string && data.artistId.size() < 100 &&
+             data.artistName is string && data.artistName.size() < 100 &&
+             data.date is string && data.date.size() < 50 &&
+             (!('location' in data) || (data.location is string && data.location.size() < 200)) &&
+             (!('imageUrl' in data) || (isValidUrl(data.imageUrl) && data.imageUrl.size() < 1000)) &&
+             (!('description' in data) || (data.description is string && data.description.size() < 2000));
+    }
+
+    function isValidSetting(data, settingId) {
+      return (settingId == 'stream_url' && 
+              data.keys().hasAll(['key', 'value']) &&
+              data.key == 'stream_url' &&
+              data.value is string && data.value.size() < 1000) ||
+             (settingId == 'general' &&
+              data.keys().hasAll(['title', 'subtitle', 'heroImageUrl']) &&
+              data.title is string && data.title.size() < 100 &&
+              data.subtitle is string && data.subtitle.size() < 1000 &&
+              data.heroImageUrl is string && data.heroImageUrl.size() < 1000 &&
+              (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() < 1000)));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /artists/{artistId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidArtist(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidEvent(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidSetting(request.resource.data, settingId);
+    }
+
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}
